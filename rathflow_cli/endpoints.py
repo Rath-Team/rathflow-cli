@@ -21,6 +21,11 @@ ENDPOINTS: dict[str, tuple[str, str]] = {
     "auth.Login": ("POST", "/api/v1/auth/login"),
     "auth.Logout": ("POST", "/api/v1/auth/logout"),
     "auth.Refresh": ("POST", "/api/v1/auth/refresh"),
+    "auth.ChangePassword": ("POST", "/api/v1/profile/password"),
+    "auth.GetProfile": ("GET", "/api/v1/profile"),
+    "auth.UpdateAvatar": ("PUT", "/api/v1/profile/avatar"),
+    "auth.UpdateEmail": ("POST", "/api/v1/profile/email"),
+    "auth.UpdateProfile": ("PATCH", "/api/v1/profile"),
     "auth.Register": ("POST", "/api/v1/auth/register"),
     "auth.RevokeAPIKey": ("DELETE", "/api/v1/api-keys/{key_id}"),
     # ---- tenant：分享链接（能力凭证，明文只在创建/轮换时出现一次）----
@@ -30,6 +35,7 @@ ENDPOINTS: dict[str, tuple[str, str]] = {
     "tenant.UpdateProjectShare": ("PATCH", "/api/v1/projects/{project_id}/share"),
     # ---- tenant：org 成员身份 ----
     "tenant.AcceptOrgInvitation": ("POST", "/api/v1/orgs/join"),
+    "tenant.CreateOrg": ("POST", "/api/v1/orgs"),
     "tenant.CreateOrgInvitation": ("POST", "/api/v1/orgs/{org_id}/invitations"),
     "tenant.ListMyOrgs": ("GET", "/api/v1/orgs"),
     # ---- tenant：project ----
@@ -56,6 +62,7 @@ ENDPOINTS: dict[str, tuple[str, str]] = {
     "session.ShareBlock": ("POST", "/api/v1/blocks/{block_id}/shares"),
     "session.StreamSessionEvents": ("GET", "/api/v1/sessions/{session_id}/events:stream"),
     # ---- workflow ----
+    "workflow.CountWorkflowsByProject": ("GET", "/api/v1/workflows:counts"),
     "workflow.CreateWorkflow": ("POST", "/api/v1/workflows"),
     "workflow.DeleteWorkflow": ("DELETE", "/api/v1/workflows/{workflow_id}"),
     "workflow.GetWorkflow": ("GET", "/api/v1/workflows/{workflow_id}"),
@@ -63,6 +70,7 @@ ENDPOINTS: dict[str, tuple[str, str]] = {
     "workflow.UpdateWorkflow": ("PATCH", "/api/v1/workflows/{workflow_id}"),
     # ---- agent ----
     "agent.CreateAgentDef": ("POST", "/api/v1/agents"),
+    "agent.ReadAttachment": ("GET", "/api/v1/attachments/{attachment_id}"),
     "agent.DeleteAgentDef": ("DELETE", "/api/v1/agents/{agent_def_id}"),
     "agent.GetAgentDef": ("GET", "/api/v1/agents/{agent_def_id}"),
     "agent.GetAgentDefVersion": ("GET", "/api/v1/agents/{agent_def_id}/versions/{version}"),
@@ -155,6 +163,7 @@ MULTI_PARAMS: dict[str, frozenset[str]] = {
 # 走 call() 会拿到逐行 JSON 的未解析正文。
 STREAMING: frozenset[str] = frozenset(
     {
+        "agent.ReadAttachment",
         "sandbox.RunCommand",
         "sandbox.RunCode",
         "sandbox.ReadFile",
@@ -197,7 +206,17 @@ def render_path(key: str, params: dict) -> str:
             raise UsageError(f"{key} 需要路径参数 --path {name}=<值>")
         text = str(value)
         if name in multi:
-            return "/".join(quote(seg, safe="") for seg in text.split("/"))
+            segments = text.split("/")
+            # `.` / `..` / 空段会被 HTTP 客户端按 URL 语义归一化（`a/b/../c` → `a/c`，
+            # `//x` → `/x`），于是实际请求会跑到别的端点上，还顺手绕过上面那层
+            # 「首段在域内」的检查。逐段 encode 拦不住它们（`.` 是 unreserved，
+            # quote 不会动），所以在这里直接拒掉，要求相对、干净的路径。
+            for seg in segments:
+                if seg in ("", ".", ".."):
+                    raise UsageError(
+                        f"{name} 不能含空段或 '.'/'..'：{text!r}（要相对路径，如 memories/notes/a.md）"
+                    )
+            return "/".join(quote(seg, safe="") for seg in segments)
         return quote(text, safe="")
 
     return _TEMPLATE_RE.sub(repl, template)

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import base64
+import mimetypes
+import sys
+
 import typer
 
 from .. import config, output
+from ..errors import UsageError
 from ..state import current
 
 app = typer.Typer(no_args_is_help=True, help="登录 / 登出 / 注册 / 身份")
@@ -121,6 +126,102 @@ def key_revoke(
         typer.confirm(f"确认吊销 {key_id}？", abort=True)
     st.client().call("auth.RevokeAPIKey", path_params={"key_id": key_id})
     typer.echo(f"已吊销 {key_id}")
+
+
+# ------------------------------------------------------------------ 个人资料
+
+_AVATAR_MEDIA_TYPES = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+
+
+@app.command("profile")
+def profile() -> None:
+    """看当前账号资料（头像以 base64 内联，这里只显示「有/类型」，字节走 --json）。"""
+    st = current()
+    payload = st.client().call("auth.GetProfile")
+    if st.json_out:
+        output.emit_json(payload)
+        return
+    view = {k: v for k, v in payload.items() if k != "avatarBytes"}
+    if payload.get("avatarBytes"):
+        view["avatar"] = payload.get("avatarMediaType") or "有（--json 取字节）"
+    output.emit_object(view, json_out=False)
+
+
+@app.command("profile-update")
+def profile_update(
+    display_name: str = typer.Option(None, "--display-name", help="显示名"),
+    username: str = typer.Option(None, "--username"),
+    phone: str = typer.Option(None, "--phone"),
+) -> None:
+    """改资料；只发显式给出的字段（都不给 = 用法错，避免空 PATCH）。"""
+    st = current()
+    body: dict = {}
+    if display_name is not None:
+        body["displayName"] = display_name
+    if username is not None:
+        body["username"] = username
+    if phone is not None:
+        body["phone"] = phone
+    if not body:
+        raise UsageError("至少给一个：--display-name / --username / --phone")
+    output.emit_object(st.client().call("auth.UpdateProfile", body=body), json_out=st.json_out)
+
+
+@app.command("change-password")
+def change_password(
+    current_password: str = typer.Option(None, "--current-password", help="缺省交互输入，不进 shell 历史"),
+    new_password: str = typer.Option(None, "--new-password", help="缺省交互输入；>=8 位且含大小写"),
+) -> None:
+    """改密码（旧密码证明是本人）。"""
+    st = current()
+    current_password = current_password or typer.prompt("当前密码", hide_input=True)
+    new_password = new_password or typer.prompt("新密码", hide_input=True, confirmation_prompt=True)
+    st.client().call(
+        "auth.ChangePassword",
+        body={"currentPassword": current_password, "newPassword": new_password},
+    )
+    typer.echo("密码已更新")
+
+
+@app.command("set-email")
+def set_email(
+    new_email: str = typer.Option(..., "--email", "-e", help="新登录邮箱"),
+    current_password: str = typer.Option(None, "--current-password", help="缺省交互输入"),
+) -> None:
+    """换登录邮箱（要当前密码，防止被盗会话直接改）。"""
+    st = current()
+    current_password = current_password or typer.prompt("当前密码", hide_input=True)
+    payload = st.client().call(
+        "auth.UpdateEmail",
+        body={"newEmail": new_email, "currentPassword": current_password},
+    )
+    output.emit_object(payload, json_out=st.json_out)
+
+
+@app.command("set-avatar")
+def set_avatar(
+    file: str = typer.Option(None, "--file", "-f", help="图片文件；传 - 读 stdin"),
+    media_type: str = typer.Option(None, "--media-type", help="缺省按扩展名猜"),
+    clear: bool = typer.Option(False, "--clear", help="清除头像"),
+) -> None:
+    """换/清头像（base64 内联，服务端限 64KB 方图）。"""
+    st = current()
+    if clear and file:
+        raise UsageError("--clear 与 --file 互斥")
+    if not clear and not file:
+        raise UsageError("给 --file <图片>，或用 --clear 清除头像")
+    body: dict = {}
+    if clear:
+        body = {"data": "", "mediaType": ""}
+    else:
+        raw = sys.stdin.buffer.read() if file == "-" else open(file, "rb").read()
+        mt = media_type or (mimetypes.guess_type(file)[0] if file != "-" else None)
+        if mt not in _AVATAR_MEDIA_TYPES:
+            raise UsageError(
+                f"媒体类型 {mt or '(未知)'} 不在白名单：{', '.join(sorted(_AVATAR_MEDIA_TYPES))}（用 --media-type 指定）"
+            )
+        body = {"data": base64.b64encode(raw).decode(), "mediaType": mt}
+    output.emit_object(st.client().call("auth.UpdateAvatar", body=body), json_out=st.json_out)
 
 
 def whoami() -> None:

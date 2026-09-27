@@ -44,17 +44,17 @@ The default gateway is `https://rathflow.lynwe.com`. Point it elsewhere with
 
 | Group | What it covers |
 | --- | --- |
-| `auth` | log in / out, register, API keys (`keys`, `key-create`, `key-revoke`) |
+| `auth` | log in / out, register, profile (`profile`, `profile-update`, `change-password`, `set-email`, `set-avatar`), API keys |
 | `config` | local profiles (`list`, `show`, `set`, `use`) |
-| `org` | organizations, invitations |
+| `org` | organizations (`list`, `create`, `invite`, `accept`) |
 | `project` | projects, scope switching, project config, share links |
 | `session` | sessions, blocks, events |
 | `memory` | memory entries, search, commit tasks |
 | `sandbox` | sandboxes, exec, code, files, logs |
-| `agent` | agent definitions, versions, prompts, runs |
+| `agent` | agent definitions, versions, prompts, runs, attachments |
 | `asset` | assets, versions, credentials, publish |
 | `billing` | subscription, usage, invoices |
-| `workflow` | workflows |
+| `workflow` | workflows (`list`, `get`, `create`, `delete`, `counts`) |
 | `admin` | platform administration (platform admins only) |
 
 Two more entry points sit at the root:

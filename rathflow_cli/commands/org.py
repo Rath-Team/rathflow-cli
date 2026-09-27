@@ -30,6 +30,22 @@ def list_() -> None:
     output.emit_items(payload, items_key="orgs", columns=_COLUMNS, json_out=st.json_out)
 
 
+@app.command("create")
+def create(
+    name: str = typer.Option(..., "--name", "-n", help="展示名（1..60 字符；slug 服务端派生）"),
+) -> None:
+    """新建组织（自己是 OWNER，且会附带一个默认 project）。"""
+    st = current()
+    payload = st.client().call("tenant.CreateOrg", body={"name": name})
+    if st.json_out:
+        output.emit_json(payload)
+        return
+    org = payload.get("org") or {}
+    typer.echo(f"已创建 {org.get('orgId') or '?'}  {org.get('name') or name}")
+    if payload.get("defaultProjectId"):
+        typer.echo(f"切过去：rathflow project use {payload['defaultProjectId']}")
+
+
 @app.command("invite")
 def invite(
     org_id: str = typer.Argument(...),

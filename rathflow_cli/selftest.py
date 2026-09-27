@@ -1,12 +1,14 @@
 """轻量自检（不联服务端）：``python -m rathflow_cli.selftest``
 
-查两件事，都是「装得上但会打错 URL」的那类毛病：
+查三件事，都是「装得上但会打错 URL」的那类毛病：
 
 1. **命令实现里不写 URL 字面量** —— 所有请求必须走 ``endpoints.py`` 的端点 key；
 2. **端点表与生成物一致** —— 生成物 ``endpoints.ts`` 由上游 proto 生成，本包的
    ``endpoints.py`` 手工同步；两者漂移就会打错 URL。生成物在本仓库中不存在
    （它是上游 monorepo 的产物），此时这一项跳过，可用环境变量
    ``RATHFLOW_ENDPOINTS_TS`` 指向它来启用比对。
+3. **多段路径参数拦住点段** —— ``..`` 会被 HTTP 客户端按 URL 语义归一化，
+   把请求打到别的端点上（还会绕过命令自己的域检查）。
 """
 
 from __future__ import annotations
@@ -15,6 +17,8 @@ import re
 import os
 import sys
 from pathlib import Path
+
+from .errors import UsageError
 
 from . import endpoints
 
@@ -46,7 +50,12 @@ _URL_LITERAL = re.compile(r'"(?:/api/|/admin/api/)')
 
 def main() -> int:
     generated_problems, compared = _check_generated()
-    problems = generated_problems + _check_no_url_literals()
+    problems = (
+        generated_problems
+        + _check_no_url_literals()
+        + _check_path_guard()
+        + _check_hoist_flags()
+    )
     if problems:
         print(f"自检未通过（{len(problems)} 项）：", file=sys.stderr)
         for line in problems:
@@ -110,6 +119,49 @@ def _check_no_url_literals() -> list[str]:
             if _URL_LITERAL.search(line) and not line.lstrip().startswith("#"):
                 problems.append(f"{path.name}:{no} 出现 URL 字面量（该走端点 key）")
     return problems
+
+
+def _check_hoist_flags() -> list[str]:
+    """全局旗标写在子命令后面也必须能用（脚本里最常见的写法）。"""
+    from . import cli
+
+    problems = []
+    for argv in (
+        ["rathflow", "auth", "profile", "--json"],
+        ["rathflow", "project", "list", "--json"],
+        ["rathflow", "config", "use", "default", "--json"],
+        ["rathflow", "session", "get", "S1", "--json"],
+    ):
+        hoisted = cli._hoist_globals(list(argv))
+        if hoisted[1:2] != ["--json"]:
+            problems.append(f"{' '.join(argv)}: 末尾 --json 未被前移（会报 no such option）")
+    return problems
+
+
+def _check_path_guard() -> list[str]:
+    """多段路径里的 ``.``/``..``/空段必须被拒，正常路径仍要能渲染。"""
+    cases = {"memory.Read": "memory_path", "sandbox.ReadFile": "path"}
+    bad_inputs = ("a/../b", "../x", "/abs", "a//b", "a/./b")
+    problems = []
+    for key, name in cases.items():
+        others = {p: "X1" for p in endpoints.path_params(key) if p != name}
+        for bad in bad_inputs:
+            try:
+                rendered = endpoints.render_path(key, {name: bad, **others})
+            except UsageError:
+                continue
+            except Exception as exc:  # noqa: BLE001 - 自检要报「类型不对」
+                problems.append(f"{key}: {name}={bad!r} 抛了 {type(exc).__name__}，应抛 UsageError")
+            else:
+                problems.append(
+                    f"{key}: {name}={bad!r} 未被拒绝，会渲染成 {rendered}（URL 归一化后打到别的端点）"
+                )
+        good = endpoints.render_path(key, {name: "a/b c.md", **others})
+        if not good.endswith("a/b%20c.md"):
+            problems.append(f"{key}: 正常路径渲染异常 {good}")
+    return problems
+
+
 
 
 def _names(raw: str) -> set[str]:

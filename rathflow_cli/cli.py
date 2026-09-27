@@ -101,7 +101,10 @@ def _value_opts() -> set[str]:
         for param in getattr(cmd, "params", []):
             if getattr(param, "is_flag", False) or getattr(param, "count", False):
                 continue
-            found.update(getattr(param, "opts", []))
+            # 只认真正的选项（以 "-" 开头）。位置参数的 opts 是它自己的名字
+            # （例如 `auth profile` 的 `profile`），把它当吃值的选项会让
+            # `rathflow auth profile --json` 里的 --json 不被前移而报错。
+            found.update(o for o in getattr(param, "opts", []) if o.startswith("-"))
         for sub in getattr(cmd, "commands", {}).values():
             found |= walk(sub)
         return found

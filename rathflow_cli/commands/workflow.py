@@ -44,6 +44,19 @@ def get(workflow_id: str = typer.Argument(...)) -> None:
     output.emit_object(payload, json_out=st.json_out)
 
 
+@app.command("counts")
+def counts() -> None:
+    """每个 project 的存活工作流数（服务端不返回 0 的行 = 没有）。"""
+    st = current()
+    payload = st.client().call("workflow.CountWorkflowsByProject")
+    output.emit_items(
+        payload,
+        items_key="counts",
+        columns=[("PROJECT ID", "projectId"), ("数量", "count")],
+        json_out=st.json_out,
+    )
+
+
 @app.command("create")
 def create(
     title: str = typer.Option(None, "--title", "-t"),

@@ -1,6 +1,8 @@
-"""agent：Agent 定义、版本、运行与 Agent 目录。"""
+"""agent：Agent 定义、版本、运行、Agent 目录与附件。"""
 
 from __future__ import annotations
+
+import base64
 
 import typer
 
@@ -269,6 +271,47 @@ def messages(
         ],
         json_out=st.json_out,
     )
+
+
+@app.command("attachment")
+def attachment(
+    attachment_id: str = typer.Argument(..., help="sha256:<hex>，取自事件里的 attachmentRef"),
+    out: str = typer.Option(None, "--out", "-o", help="写文件；缺省写 stdout"),
+) -> None:
+    """读附件字节（流式，分片直写，不整包缓冲）。"""
+    st = current()
+    fh = None
+    try:
+        if out:
+            fh = open(out, "wb")
+        for chunk in st.client().stream(
+            "agent.ReadAttachment", path_params={"attachment_id": attachment_id}
+        ):
+            if st.json_out:
+                output.emit_json(chunk)
+                continue
+            data = _bytes(chunk.get("data"))
+            if not data:
+                continue
+            if fh:
+                fh.write(data)
+            else:
+                output.write_bytes(data)
+    finally:
+        if fh:
+            fh.close()
+
+
+def _bytes(value) -> bytes:
+    """protojson 把 bytes 编成 base64；解失败就当纯文本用。"""
+    if not value:
+        return b""
+    if isinstance(value, bytes):
+        return value
+    try:
+        return base64.b64decode(value, validate=True)
+    except Exception:
+        return str(value).encode()
 
 
 def _text_of(text: str | None, file: str | None) -> str | None:

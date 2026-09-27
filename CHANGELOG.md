@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-27
+
+### Fixed
+
+- Multi-segment path params (`memory read/write/delete`, `sandbox cat`) now reject
+  empty, `.` and `..` segments. Such a value was passed through unencoded (`.` is
+  unreserved, so percent-encoding does not touch it) and the HTTP client then
+  normalized it away: `memory read memories/../../secrets` actually requested
+  `/api/v1/secrets`. That silently hit a different endpoint and bypassed the
+  command's own "first segment must be `memories`/`resources`" guard.
+- `python -m rathflow_cli.selftest` now checks that guard, so CI catches any
+  regression without a network call.
+- Global flags placed **after** a subcommand are hoisted again for every command.
+  `_value_opts()` treated positional argument names as value-taking options, so
+  `rathflow auth profile --json` (and anything else whose last word matched an
+  argument name, e.g. `config use <profile>`) failed with "No such option".
+
+### Added
+
+- The 8 REST endpoints that upstream `endpoints.ts` (111 total) had but this
+  package was missing, each with a command:
+  `auth profile`, `auth profile-update`, `auth change-password`, `auth set-email`,
+  `auth set-avatar`, `org create`, `workflow counts`, `agent attachment`.
+- `agent.ReadAttachment` is marked streaming (it returns `AttachmentChunk`
+  frames), so `agent attachment` writes bytes chunk by chunk instead of buffering.
+
 ## [0.1.2] - 2026-09-27
 
 ### Fixed
@@ -38,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `billing`, `workflow`, `admin`, plus the `api` escape hatch.
 - `--json` / `--quiet` output modes and the `rathflow_cli.selftest` endpoint check.
 
-[Unreleased]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Rath-Team/rathflow-cli/releases/tag/v0.1.0
