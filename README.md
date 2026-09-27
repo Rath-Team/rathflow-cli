@@ -32,6 +32,8 @@ npm install -g rathflow-cli
 Both install a `rathflow` command; install only one globally, or call the other by path.
 The two packages are released together from the same `v*` tag.
 
+Releasing both packages is documented in [RELEASING.md](RELEASING.md).
+
 ## Quick start
 
 ```bash
