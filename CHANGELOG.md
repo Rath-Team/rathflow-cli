@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-27
+
+### Fixed
+
+- `rathflow config show` no longer reports the merged effective `base_url`/`project`
+  as if they were environment variables. The `env` block now shows the real
+  `RATHFLOW_BASE_URL` / `RATHFLOW_PROJECT` / `RATHFLOW_TOKEN` values, with
+  `(未设置)` when unset, so you can tell whether an env var is actually overriding.
+
+### Added
+
+- `rathflow --version`.
+
 ## [0.1.0] - 2026-09-27
 
 ### Added
@@ -17,5 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `billing`, `workflow`, `admin`, plus the `api` escape hatch.
 - `--json` / `--quiet` output modes and the `rathflow_cli.selftest` endpoint check.
 
-[Unreleased]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Rath-Team/rathflow-cli/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Rath-Team/rathflow-cli/releases/tag/v0.1.0

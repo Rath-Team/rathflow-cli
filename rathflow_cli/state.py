@@ -47,13 +47,17 @@ class State:
         self.quiet = self.quiet or quiet
 
         prof = self.profile
+        # 原始环境变量值：只用于如实展示「环境变量到底设没设」，不参与合并，
+        # 否则 config show 会把生效值当成环境变量回显，让人误以为有 env 覆盖。
+        self.env_base_url = _env(config.ENV_BASE_URL)
+        self.env_project = _env(config.ENV_PROJECT)
         self.base_url = (
             self._flags.get("base_url")
-            or _env(config.ENV_BASE_URL)
+            or self.env_base_url
             or prof.get("base_url")
             or config.DEFAULT_BASE_URL
         )
-        self.project = self._flags.get("project") or _env(config.ENV_PROJECT) or prof.get("project")
+        self.project = self._flags.get("project") or self.env_project or prof.get("project")
 
     @property
     def profile_name(self) -> str:

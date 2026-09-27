@@ -55,9 +55,11 @@ def show() -> None:
             "project": st.project or "(未设置)",
             "token": config.mask(st.profile.get("access_token")),
             "config_file": str(config.config_path()),
+            # 只回显真实存在的环境变量；未设时明确写「(未设置)」，
+            # 否则会把 profile/默认值伪装成 env 覆盖，误导用户与模型。
             "env": {
-                config.ENV_BASE_URL: st.base_url,
-                config.ENV_PROJECT: st.project,
+                config.ENV_BASE_URL: st.env_base_url or "(未设置)",
+                config.ENV_PROJECT: st.env_project or "(未设置)",
                 config.ENV_TOKEN: config.mask(st.token_override),
             },
         },
