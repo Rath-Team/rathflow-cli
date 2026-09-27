@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rathflow-cli"
+version = "0.1.0"
+description = "RathFlow command line client: sessions, memory, sandboxes, assets and billing over the RathFlow REST API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Rath Team" }]
+keywords = ["rathflow", "cli", "agent", "sessions", "memory", "sandbox"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development",
+  "Topic :: Utilities",
+]
+dependencies = [
+  "httpx>=0.27",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+# 走 SOCKS 代理（ALL_PROXY=socks5://…）时需要，见 README「代理」一节。
+socks = ["httpx[socks]"]
+
+[project.urls]
+Homepage = "https://rathflow.lynwe.com/"
+Repository = "https://github.com/Rath-Team/rathflow-cli"
+Issues = "https://github.com/Rath-Team/rathflow-cli/issues"
+Changelog = "https://github.com/Rath-Team/rathflow-cli/blob/main/CHANGELOG.md"
+
+[project.scripts]
+rathflow = "rathflow_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["rathflow_cli*"]
