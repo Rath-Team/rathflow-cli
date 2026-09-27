@@ -48,22 +48,29 @@ def list_() -> None:
 def show() -> None:
     """显示当前生效配置（flag/env 覆盖后的结果）。"""
     st = current()
+    # 只回显真实存在的环境变量；未设时明确写「(未设置)」，
+    # 否则会把 profile/默认值伪装成 env 覆盖，误导用户与模型。
+    env_view = {
+        config.ENV_BASE_URL: st.env_base_url or "(未设置)",
+        config.ENV_PROJECT: st.env_project or "(未设置)",
+        config.ENV_TOKEN: config.mask(st.token_override),
+    }
+    payload = {
+        "profile": st.profile_name,
+        "base_url": st.base_url,
+        "project": st.project or "(未设置)",
+        "token": config.mask(st.profile.get("access_token")),
+        "config_file": str(config.config_path()),
+        "env": env_view,
+    }
+    if st.json_out:
+        output.emit_json(payload)
+        return
+    # 人类可读模式把 env 摊平到顶层：嵌套 dict 会被截断到 48 列，
+    # 只看得到第一个变量，等于看不出来到底有没有 env 覆盖。
     output.emit_object(
-        {
-            "profile": st.profile_name,
-            "base_url": st.base_url,
-            "project": st.project or "(未设置)",
-            "token": config.mask(st.profile.get("access_token")),
-            "config_file": str(config.config_path()),
-            # 只回显真实存在的环境变量；未设时明确写「(未设置)」，
-            # 否则会把 profile/默认值伪装成 env 覆盖，误导用户与模型。
-            "env": {
-                config.ENV_BASE_URL: st.env_base_url or "(未设置)",
-                config.ENV_PROJECT: st.env_project or "(未设置)",
-                config.ENV_TOKEN: config.mask(st.token_override),
-            },
-        },
-        json_out=st.json_out,
+        {k: v for k, v in payload.items() if k != "env"} | env_view,
+        json_out=False,
     )
 
 
