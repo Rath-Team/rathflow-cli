@@ -34,3 +34,33 @@ jobs:
           .venv/bin/rathflow --help
           RATHFLOW_CONFIG_DIR="$RUNNER_TEMP/rathflow-cfg" \
             .venv/bin/python -m rathflow_cli.selftest
+
+  node:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22", "24"]
+    defaults:
+      run:
+        working-directory: node
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Selftest and CLI smoke
+        run: |
+          npm test
+          node src/selftest.js
+
+      - name: Install the packed tarball into a clean prefix
+        run: |
+          npm pack
+          npm install -g ./rathflow-cli-*.tgz --prefix "$RUNNER_TEMP/npm-prefix"
+          "$RUNNER_TEMP/npm-prefix/bin/rathflow" --version
+          "$RUNNER_TEMP/npm-prefix/bin/rathflow" --help > /dev/null
+          RATHFLOW_CONFIG_DIR="$RUNNER_TEMP/rathflow-cfg" \
+            "$RUNNER_TEMP/npm-prefix/bin/rathflow" config show

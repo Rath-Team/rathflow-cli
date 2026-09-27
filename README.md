@@ -2,13 +2,18 @@
 
 [![PyPI](https://img.shields.io/pypi/v/rathflow-cli.svg)](https://pypi.org/project/rathflow-cli/)
 [![Python](https://img.shields.io/pypi/pyversions/rathflow-cli.svg)](https://pypi.org/project/rathflow-cli/)
+[![npm](https://img.shields.io/npm/v/rathflow-cli.svg)](https://www.npmjs.com/package/rathflow-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 The RathFlow command line client. It talks to the RathFlow northbound REST API and
 covers sessions, memory, sandboxes, agents, assets, projects, billing and
-workflows.
+workflows. Two implementations ship from this repository — **Python** (`rathflow_cli/`)
+and **Node.js** ([`node/`](node/README.md)) — with the same commands, options, output and
+exit codes. They share one config file, so you can switch between them freely.
 
 ## Install
+
+Python (3.10+):
 
 ```bash
 uv tool install rathflow-cli
@@ -18,7 +23,14 @@ pipx install rathflow-cli
 pip install rathflow-cli
 ```
 
-Requires Python 3.10+.
+Node.js (20+):
+
+```bash
+npm install -g rathflow-cli
+```
+
+Both install a `rathflow` command; install only one globally, or call the other by path.
+The two packages are released together from the same `v*` tag.
 
 ## Quick start
 

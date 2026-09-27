@@ -1,0 +1,45 @@
+{
+  "name": "rathflow-cli",
+  "version": "0.1.3",
+  "description": "RathFlow command line client (Node.js implementation, zero runtime dependencies)",
+  "type": "module",
+  "bin": {
+    "rathflow": "bin/rathflow.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "selftest": "node src/selftest.js",
+    "test": "node src/selftest.js && node bin/rathflow.mjs --version && node bin/rathflow.mjs --help > /dev/null",
+    "help": "node bin/rathflow.mjs --help"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rath-Team/rathflow-cli.git",
+    "directory": "node"
+  },
+  "homepage": "https://github.com/Rath-Team/rathflow-cli#readme",
+  "bugs": {
+    "url": "https://github.com/Rath-Team/rathflow-cli/issues"
+  },
+  "keywords": [
+    "rathflow",
+    "cli",
+    "agent",
+    "sessions",
+    "memory",
+    "sandbox"
+  ],
+  "author": "Rath Team",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
