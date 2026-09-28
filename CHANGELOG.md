@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-09-28
+
+### Added
+
+- `rathflow mcp serve` — an MCP (Model Context Protocol) server on stdio, so MCP
+  clients like Codex or Claude can drive RathFlow without shell access. It ships
+  a curated task-shaped tool set instead of a 1:1 mapping of the 111 endpoints:
+  14 read tools by default, plus 5 write tools that only appear when
+  `RATHFLOW_MCP_WRITE=1` is set. Endpoints without a named tool stay reachable
+  through `rathflow_endpoints` + `rathflow_api_call`, the same escape hatch as
+  `rathflow api <Key>`.
+- The server advertises protocol `2025-11-25` and negotiates down to the client's
+  version. Auth reuses the CLI config and the token is refreshed mid-session, so a
+  long-lived MCP session survives expiry. When there are no credentials it tells
+  the user to run `rathflow auth login` — it never suggests cloning sources or
+  running a local Gateway.
+- Three new selftest checks cover the MCP server: version negotiation, tool schema
+  validity, protocol error codes, and the "no credentials" wording.
+
+### Fixed
+
+- A 401 replay sent the **previous** `Authorization` header. `Client._send` built
+  the headers once before the retry loop, so after `refresh()` rotated the access
+  token the replay kept the stale one and 401'd again. Long-lived processes (the
+  MCP server, or any session that outlives its token) could not recover without a
+  restart. Headers are now rebuilt per attempt.
+
+### Notes
+
+- `rathflow mcp serve` currently ships in the **Python** package only; the Node
+  CLI has not been ported yet.
+
 ## [0.1.3] - 2026-09-27
 
 ### Fixed

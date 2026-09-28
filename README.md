@@ -70,6 +70,7 @@ The default gateway is `https://rathflow.lynwe.com`. Point it elsewhere with
 | `billing` | subscription, usage, invoices |
 | `workflow` | workflows (`list`, `get`, `create`, `delete`, `counts`) |
 | `admin` | platform administration (platform admins only) |
+| `mcp` | an MCP server on stdio, for Codex / Claude and other MCP clients |
 
 Two more entry points sit at the root:
 
@@ -78,6 +79,25 @@ Two more entry points sit at the root:
   the whole table. Streaming endpoints stream.
 
 Every group has `--help`, e.g. `rathflow session --help`.
+
+## MCP
+
+`rathflow mcp serve` runs an MCP server on stdio so an MCP client can drive
+RathFlow through the tools instead of a shell. Register it with the client, for
+example in `.mcp.json`:
+
+```json
+{ "mcpServers": { "rathflow": { "command": "rathflow", "args": ["mcp", "serve"] } } }
+```
+
+It exposes 14 read tools, plus 5 write tools once `RATHFLOW_MCP_WRITE=1` is set in
+the server's environment. Anything without a named tool is still reachable via
+`rathflow_endpoints` (the endpoint table) and `rathflow_api_call`. Authentication
+is the same as the CLI's: run `rathflow auth login` once, and the server refreshes
+the token as it goes.
+
+> `mcp serve` is available in the Python package only for now — the Node CLI has
+> not been ported yet.
 
 ## Authentication
 

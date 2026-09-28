@@ -54,6 +54,7 @@ def _register() -> None:
         auth_cmd,
         billing,
         config_cmd,
+        mcp_cmd,
         memory,
         org,
         project,
@@ -64,6 +65,7 @@ def _register() -> None:
 
     app.add_typer(auth_cmd.app, name="auth")
     app.add_typer(config_cmd.app, name="config")
+    app.add_typer(mcp_cmd.app, name="mcp")
     app.add_typer(org.app, name="org")
     app.add_typer(project.app, name="project")
     app.add_typer(session.app, name="session")

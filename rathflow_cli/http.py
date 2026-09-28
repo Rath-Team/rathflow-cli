@@ -144,8 +144,10 @@ class Client:
         """带令牌发请求；401 → 刷新一次并重放。streaming 时响应未读体（调用方 close）。"""
         self.ensure_token()
         url = self.base_url + path
-        headers = self._headers()
         for attempt in (0, 1):
+            # 头必须每轮重建：401 重放前 refresh 会换掉 access_token，
+            # 若沿用上一轮的 Authorization，重放仍带着旧令牌、必然再次 401。
+            headers = self._headers()
             try:
                 if streaming:
                     req = self._http.build_request(
