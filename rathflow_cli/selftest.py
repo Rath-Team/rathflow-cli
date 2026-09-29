@@ -11,6 +11,8 @@
    把请求打到别的端点上（还会绕过命令自己的域检查）。
 4. **MCP 服务端守协议** —— 握手版本协商、工具 schema 合法、stdout 只有 JSON 帧、
    未登录时给出的是「去配置」而不是「去找源码」。
+5. **代理协议名归一化** —— Clash 常导出 ``socks://``，httpx 不认，必须改写成
+   ``socks5h://``；不改写就会在第一次调用时裸崩。
 """
 
 from __future__ import annotations
@@ -58,6 +60,7 @@ def main() -> int:
         + _check_path_guard()
         + _check_hoist_flags()
         + _check_mcp()
+        + _check_proxy_env()
     )
     if problems:
         print(f"自检未通过（{len(problems)} 项）：", file=sys.stderr)
@@ -313,6 +316,35 @@ def _check_mcp() -> list[str]:
 
 def _names(raw: str) -> set[str]:
     return set(re.findall(r'"([^"]+)"', raw))
+
+
+def _check_proxy_env() -> list[str]:
+    """socks:// 与 socks4:// 必须被改写成 httpx 认得的 socks5h://，其余原样。"""
+    from . import http
+
+    saved = {name: os.environ.get(name) for name in http._PROXY_VARS}
+    problems: list[str] = []
+    try:
+        os.environ["ALL_PROXY"] = "socks://127.0.0.1:7897"
+        os.environ["all_proxy"] = "socks4://127.0.0.1:7897"
+        os.environ["HTTPS_PROXY"] = "http://127.0.0.1:7897"
+        http.normalize_proxy_env()
+        if os.environ["ALL_PROXY"] != "socks5h://127.0.0.1:7897":
+            problems.append(f"ALL_PROXY=socks:// 未归一化：{os.environ['ALL_PROXY']}")
+        if os.environ["all_proxy"] != "socks5h://127.0.0.1:7897":
+            problems.append(f"all_proxy=socks4:// 未归一化：{os.environ['all_proxy']}")
+        if os.environ["HTTPS_PROXY"] != "http://127.0.0.1:7897":
+            problems.append(f"http 代理被误改：{os.environ['HTTPS_PROXY']}")
+        http.normalize_proxy_env()
+        if os.environ["ALL_PROXY"] != "socks5h://127.0.0.1:7897":
+            problems.append("归一化不是幂等的")
+    finally:
+        for name, value in saved.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+    return problems
 
 
 if __name__ == "__main__":

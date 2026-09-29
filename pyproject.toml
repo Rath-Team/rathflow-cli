@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rathflow-cli"
-version = "0.1.4"
+version = "0.1.5"
 description = "RathFlow command line client: sessions, memory, sandboxes, assets and billing over the RathFlow REST API."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# 走 SOCKS 代理（ALL_PROXY=socks5://…）时需要，见 README「代理」一节。
+# 走 SOCKS 代理（ALL_PROXY=socks://… / socks5://…）时需要，见 README「代理」一节。
 socks = ["httpx[socks]"]
 
 [project.urls]

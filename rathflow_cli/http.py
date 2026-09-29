@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from typing import Iterator
 
@@ -25,6 +26,29 @@ _STREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0)
 
 # 到期前多久就主动刷新（秒）
 _REFRESH_MARGIN = 60
+
+# httpx 只认 socks5/socks5h；Clash 之类常导出 socks://，直接用会抛
+# ValueError: Unknown scheme for proxy URL。socks4 在 httpx 里根本不存在，
+# 而现实中的 SOCKS 端口（Clash 等）都同时支持 SOCKS5，所以一并改写成 socks5h。
+_PROXY_VARS = ("ALL_PROXY", "all_proxy", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
+_SOCKS_SCHEMES = {"socks": "socks5h", "socks4": "socks5h"}
+
+
+def normalize_proxy_env() -> None:
+    """把环境变量里的 socks://（和 socks4://）改写成 httpx 认得的 socks5h://。
+
+    只改协议名，其余原样保留；幂等，且只动代理变量本身。
+    """
+    for name in _PROXY_VARS:
+        value = os.environ.get(name)
+        if not value:
+            continue
+        scheme, sep, rest = value.partition("://")
+        if not sep:
+            continue
+        replacement = _SOCKS_SCHEMES.get(scheme.lower())
+        if replacement:
+            os.environ[name] = f"{replacement}://{rest}"
 
 
 class Client:
@@ -46,6 +70,7 @@ class Client:
         self.refresh_token = refresh_token or None
         self.expires_at = float(expires_at or 0)
         self._persist = persist
+        normalize_proxy_env()
         # 客户端级超时取流式那份（read=None：沙箱里跑长命令时中途没输出也该活着）；
         # 普通调用在 _open 里逐次传 _TIMEOUT 盖掉它。
         self._http = httpx.Client(follow_redirects=False, timeout=_STREAM_TIMEOUT)

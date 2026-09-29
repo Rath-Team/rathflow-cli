@@ -158,6 +158,25 @@ def main() -> None:
         for detail in exc.details:
             print(f"  - {detail}", file=sys.stderr)
         sys.exit(exc.exit_code)
+    except ImportError as exc:
+        if "socksio" in str(exc):
+            print(
+                "错误：当前环境走 SOCKS 代理，但这个 CLI 没装 socksio。"
+                "带上 extras 重装即可：uv tool install 'rathflow-cli[socks]'",
+                file=sys.stderr,
+            )
+            sys.exit(errors.EXIT_ERROR)
+        raise
+    except ValueError as exc:
+        if "Unknown scheme for proxy URL" in str(exc):
+            print(
+                "错误：代理地址的协议 httpx 不认（只支持 http/https/socks5/socks5h）。"
+                "把 ALL_PROXY / HTTPS_PROXY 里的 socks:// 改成 socks5h://，"
+                "或升级到 rathflow-cli >= 0.1.5（会自动改写）。",
+                file=sys.stderr,
+            )
+            sys.exit(errors.EXIT_ERROR)
+        raise
     except KeyboardInterrupt:  # pragma: no cover
         sys.exit(130)
 

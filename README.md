@@ -138,16 +138,17 @@ remote command failures (a sandbox `exec` returns the remote exit code).
 
 ## Proxies
 
-The CLI respects the standard proxy variables. One caveat: `httpx` cannot use a
-SOCKS proxy unless `socksio` is installed. If your environment sets
-`ALL_PROXY=socks://...` (some Clash setups do), install the extra or the CLI
-fails to start with `Unknown scheme for proxy URL`:
+The CLI respects the standard proxy variables (`ALL_PROXY`, `HTTPS_PROXY`, …).
+SOCKS proxies need `socksio`, which ships in the `socks` extra:
 
 ```bash
 uv tool install 'rathflow-cli[socks]'
-# or clear it for this command only
-ALL_PROXY= rathflow whoami
 ```
+
+Clash and similar desktop setups often export `ALL_PROXY=socks://...`. `httpx`
+only understands `socks5://`/`socks5h://`, so the CLI rewrites that scheme for
+you (and maps `socks4://` to `socks5h://`, because `httpx` has no SOCKS4).
+Nothing to configure — just install the extra.
 
 ## Development
 

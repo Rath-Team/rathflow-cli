@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-09-29
+
+### Fixed
+
+- A Clash-style `ALL_PROXY=socks://…` (and `socks4://…`) no longer kills the
+  first HTTP call with `ValueError: Unknown scheme for proxy URL`. `httpx` only
+  speaks `socks5://`/`socks5h://`, so the client now rewrites the scheme in the
+  proxy environment variables before building its transport. The rewrite is
+  idempotent and only touches the proxy variables; ordinary `http(s)://` proxies
+  pass through untouched. `socks4://` maps to `socks5h://`, since `httpx` has no
+  SOCKS4 and the common SOCKS ports (Clash and friends) also speak SOCKS5.
+- `selftest` covers the rewrite, including idempotency.
+- Two proxy failures that used to surface as raw tracebacks now print one actionable
+  line: a missing `socksio` (`ALL_PROXY=socks5://…` without the extra) points at
+  `uv tool install 'rathflow-cli[socks]'`, and a leftover unparsable scheme points at
+  the `socks5h://` spelling / the 0.1.5 upgrade.
+
+### Notes
+
+- The Node CLI is unchanged; its version is bumped only so both packages keep
+  one version number. MCP support still ships in the Python package only.
+
 ## [0.1.4] - 2026-09-28
 
 ### Added

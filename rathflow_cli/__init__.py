@@ -3,4 +3,4 @@
 安装：``uv tool install rathflow-cli``（或 ``pip install rathflow-cli``）。
 """
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
